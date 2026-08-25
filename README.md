@@ -1,2 +1,2 @@
-# montagnini-IntrusionDetectionUNSW-NB15
+# Montagnini-IntrusionDetectionUNSW-NB15
 Machine learning model to detect malicious network traffic using the UNSW NB15 dataset.
