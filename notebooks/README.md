@@ -30,5 +30,6 @@ The file `UNSW_NB15_training-set.parquet`is included in the `../data/` folder.
 
 ## How to run
 1. Activate Jupyter environment and install dependencies.
-2. Ensure the dataset is placed in `../data/` directory.
+2. Ensure the raw dataset `UNSW_NB15_training-set.parquet` is placed in `../data/` directory.
 3. Run notebooks in order.
+4. Notebooks 02 and 03 will automatically generate and save the processed and reduced datasets into the `../data/` directory

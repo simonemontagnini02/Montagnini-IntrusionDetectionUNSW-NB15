@@ -1,0 +1,7 @@
+# Temporary files
+.ipynb_checkpoints/
+__pycache__/
+
+# Generated data
+data/processed
+data/reduced
