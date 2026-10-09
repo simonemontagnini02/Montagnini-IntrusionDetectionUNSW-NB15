@@ -40,7 +40,7 @@
   \begin{itemize}
     \item Realistic network traffic dataset with both normal and
       malicious network activity
-    \item \textbf{175,341} training records, \textbf{42} original features
+    \item \textbf{175,341} training records, \textbf{36} original features
       (categorical and numerical)
     \item Two target columns:
       \begin{itemize}
@@ -212,7 +212,7 @@
     \item \textbf{Algorithms}: Decision Tree (as a baseline) and Random Forest
     \item \textbf{Hyperparameter Tuning}: \texttt{max\_depth} and \texttt{criterion} for Decision Tree, \texttt{n\_estimators} and \texttt{max\_depth} for Random Forest, \texttt{class\_weight} \texttt{None} vs \texttt{'balanced'} for both
     \item \textbf{Imbalance Handling}: Included \texttt{class\_weight} (\texttt{None} vs \texttt{'balanced'}) to evaluate the best strategy for rare threat vectors
-    \item \textbf{Validation}: 5-fold \texttt{StratifiedKFold} to ensure 
+    \item \textbf{Validation}: 3-fold \texttt{StratifiedKFold} to ensure 
       proportional representation of all classes during training
   \end{itemize}
   \vspace{0.2cm}

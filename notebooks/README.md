@@ -11,7 +11,7 @@ pip install -r requirements.txt
 ```
 
 ## Data
-The file `UNSW_NB15_training-set.parquet`is included in the `../data/` folder.
+The file `UNSW_NB15_training-set.parquet` is included in the `../data/` folder.
 
 > As per course instructions, only the training set is used for this project.
 
@@ -22,7 +22,7 @@ The file `UNSW_NB15_training-set.parquet`is included in the `../data/` folder.
 |---|---|
 | `01_eda.ipynb` | Exploratory Data Analysis |
 | `02_processing_feature_engineering.ipynb` | Data cleaning, encoding, skewness correction |
-| `03_attribute_selecting.ipynb` | Feature selection (SelectKBest) and dimensionality reduction (PCA) |
+| `03_attribute_selection.ipynb` | Feature selection (SelectKBest) and dimensionality reduction (PCA) |
 | `04_classification_binary.ipynb` | Binary classification (label): Decision Tree vs Random Forest |
 | `05_classification_multiclass.ipynb` | Multiclass classification (attack_cat): Decision Tree vs Random Forest |
 | `06_evaluation_comparison.ipynb` | Final evaluation, confusion matrices, feature importance, conclusions |
@@ -33,3 +33,5 @@ The file `UNSW_NB15_training-set.parquet`is included in the `../data/` folder.
 2. Ensure the raw dataset `UNSW_NB15_training-set.parquet` is placed in `../data/` directory.
 3. Run notebooks in order.
 4. Notebooks 02 and 03 will automatically generate and save the processed and reduced datasets into the `../data/` directory
+5. Notebooks 04 and 05 will train and save the best models into the `../models/` directory 
+6. Notebook 06 will load the previously saved models to perform the final evaluation without retraining

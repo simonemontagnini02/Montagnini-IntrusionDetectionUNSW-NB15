@@ -38,7 +38,7 @@
 \begin{frame}{Il Dataset — UNSW-NB15}
   \begin{itemize}
     \item Dataset di traffico di rete realistico contenente attività sia normali che malevole
-    \item \textbf{175.341} record di training, \textbf{42} feature iniziali
+    \item \textbf{175.341} record di training, \textbf{36} feature iniziali
       (categoriche e numeriche)
     \item Due colonne target:
       \begin{itemize}
@@ -198,7 +198,7 @@
     \item \textbf{Algoritmi}: Decision Tree (come baseline) e Random Forest
     \item \textbf{Tuning degli Iperparametri}: \texttt{max\_depth} e \texttt{criterion} per Decision Tree, \texttt{n\_estimators} e \texttt{max\_depth} per Random Forest, \texttt{class\_weight} \texttt{None} vs \texttt{'balanced'} per entrambi
     \item \textbf{Gestione dello Sbilanciamento}: incluso \texttt{class\_weight} (\texttt{None} vs \texttt{'balanced'}) per valutare la strategia migliore sui vettori di minaccia rari
-    \item \textbf{Validazione}: 5-fold \texttt{StratifiedKFold} per garantire una rappresentazione proporzionale di tutte le classi durante il training
+    \item \textbf{Validazione}: 3-fold \texttt{StratifiedKFold} per garantire una rappresentazione proporzionale di tutte le classi durante il training
   \end{itemize}
   \vspace{0.2cm}
   \begin{block}{Metriche di Valutazione}
