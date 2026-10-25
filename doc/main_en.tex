@@ -90,8 +90,8 @@
   \begin{itemize}
     \item \textbf{Duplicate rows}: 78,519 out of 175,341 (\textbf{44.8\%})
       \begin{itemize}
-        \item Removed before splitting, to avoid data leakage between
-          train and test
+        \item Removed before splitting, to avoid data leakage between train and test
+        \item Distribution shift: the binary target becomes nearly balanced (\textbf{50.5\% Normal / 49.5\% Attack})
       \end{itemize}
     \vspace{0.3cm}
     \item \textbf{Categorical features profile}:
@@ -121,7 +121,7 @@
     \end{tabular}
   \end{center}
   \vspace{0.3cm}
-  \textbf{27 features} exceeded the skewness threshold ($> 1.0$) and were logarithmic transformed (\texttt{log1p}) in preprocessing.
+  \textbf{29 features} exceeded the skewness threshold ($> 1.0$) during raw EDA; after deduplication on the train split, \textbf{27 features} remained skewed and were transformed via \textbf{log1p}.
 \end{frame}
 
 \section{Preprocessing}
@@ -130,9 +130,9 @@
   \begin{enumerate}
     \item \textbf{Duplicate removal}: removed 78,519 duplicate rows before
       splitting
-    \item \textbf{Train/test split}: 67/33, stratified on \texttt{label}
+    \item \textbf{Train/test split}: 67/33, stratified on \texttt{attack\_cat} to preserve class proportions across both tasks
     \item \textbf{Encoding}: \texttt{OneHotEncoder} on \texttt{proto},
-      \texttt{service}, \texttt{state} — 185 total features
+      \texttt{service}, \texttt{state} — 184 total features
     \item \textbf{Skewness correction}: \texttt{log1p} transform on 27
       features (skewness $> 1.0$)
   \end{enumerate}
@@ -163,8 +163,7 @@
         \item \texttt{mutual\_info\_classif} was excluded due to extreme
           computation times on this dataset's dimensionality.
       \end{itemize}
-    \item \textbf{Selection}: $k = 50$ out of 185 features, selected separately for the
-      \texttt{label} and \texttt{attack\_cat} targets
+    \item \textbf{Selection}: $k = 50$ out of 184 features; it's embedded inside a \texttt{Pipeline} with $k \in \{30, 40, 50\}$ tuned in Cross-Validation
   \end{itemize}
   \vspace{0.3cm}
   \begin{block}{Interpretability Preservation}
@@ -176,8 +175,8 @@
   \begin{itemize}
     \item \textbf{Prerequisite scaling}: features standardized (\texttt{StandardScaler}), then PCA fitted
       on the training set only
-    \item \textbf{Explained variance}: retaining 90\% of the variance requires \textbf{137 components} (118 for 80\%) 
-    \item \textbf{Limited reduction}: 137 components out of 185 features
+    \item \textbf{Explained variance}: retaining 90\% of the variance requires \textbf{136 components} (118 for 80\%) 
+    \item \textbf{Limited reduction}: caused by the numerous one-hot encoded columns: once standardized, these sparse binary features are nearly uncorrelated with each other and cannot be effectively compressed
   \end{itemize}
   \vspace{0.3cm}
   \begin{block}{Component Analysis \& Feature Contribution}
@@ -191,7 +190,7 @@
       \toprule
        & \textbf{SelectKBest} & \textbf{PCA} \\
       \midrule
-      Dimensionality & 50 features & 137 components \\
+      Dimensionality & 30--50 features & 136 components \\
       Interpretability & High (original domain) & Low (linear combinations) \\
       Transformation & Supervised (target-aware) & Unsupervised \\
       Training efficiency & Acceptable & Impractical \\
@@ -209,13 +208,11 @@
 
 \begin{frame}{Classification Methodology}
   \begin{itemize}
-    \item \textbf{Algorithms}: Decision Tree (as a baseline) and Random Forest
-    \item \textbf{Hyperparameter Tuning}: \texttt{max\_depth} and \texttt{criterion} for Decision Tree, \texttt{n\_estimators} and \texttt{max\_depth} for Random Forest, \texttt{class\_weight} \texttt{None} vs \texttt{'balanced'} for both
+    \item \textbf{Pipeline}: Decision Tree and Random Forest wrapped in a \texttt{Pipeline} (\texttt{VarianceThreshold} + \texttt{SelectKBest} + \texttt{Classifier}), compared against an \textbf{all-feature (184) Random Forest baseline}
+    \item \textbf{Hyperparameter Tuning}: texttt{selector\_\_k} ($30, 40, 50$), \texttt{max\_depth} and \texttt{criterion} (DT), \texttt{n\_estimators} and \texttt{max\_depth} (RF)
     \item \textbf{Imbalance Handling}: Included \texttt{class\_weight} (\texttt{None} vs \texttt{'balanced'}) to evaluate the best strategy for rare threat vectors
-    \item \textbf{Validation}: 3-fold \texttt{StratifiedKFold} to ensure 
-      proportional representation of all classes during training
+    \item \textbf{Validation}: 3-fold \texttt{StratifiedKFold} on training data; test set held out for final evaluation only 
   \end{itemize}
-  \vspace{0.2cm}
   \begin{block}{Evaluation Metrics}
     Accuracy is misleading on highly imbalanced datasets. Models are evaluated 
     using \textbf{F1-Score} (Binary classification) and \textbf{Macro F1-Score} 
@@ -226,29 +223,26 @@
 \begin{frame}{Binary Classification Results}
   \begin{columns}
     \column{0.5\textwidth}
-    \hspace{1.1cm}\textbf{Model Performance} \\
-    \vspace{0.2cm}
-    \small
-    \hspace{0.5cm}
-    \begin{tabular}{lcc}
+    \hspace{0.5cm}\textbf{Cross-Validation Performance} \\
+    \vspace{0.15cm}
+    \footnotesize
+    \hspace{0.2cm}
+    \begin{tabular}{lccc}
       \toprule
-      \textbf{Metric} & \textbf{DT} & \textbf{RF} \\
+      \textbf{Metric} & \textbf{RF Base} & \textbf{DT} & \textbf{RF Best} \\
       \midrule
-      Accuracy & 0.916 & 0.920 \\
-      Precision & 0.918 & 0.923 \\
-      Recall & 0.916 & 0.920 \\
-      \textbf{F1-Score} & \textbf{0.916} & \textbf{0.920} \\
+      Accuracy & -- & 0.913 & 0.919 \\
+      Precision & -- & 0.879 & 0.885 \\
+      Recall & -- & 0.956 & 0.963 \\
+      \textbf{F1-Score} & \textbf{0.919} & \textbf{0.916} & \textbf{0.922} \\
       \bottomrule
     \end{tabular}
-
-    \vspace{0.1cm}
-    \hspace{0.8cm}{\tiny DT = Decision Tree, RF = Random Forest}
     
-    \vspace{0.4cm}
+    \vspace{0.25cm}
+    \footnotesize
     \begin{itemize}
-      \item Random Forest achieves an excellent F1-Score of \textbf{0.920}.
-      \item The model is \textbf{highly reliable} in distinguishing malicious 
-      activity from normal traffic.
+      \item \textbf{Test Set (RF, $k=50$)}: \textbf{F1 = 0.921}, Attack Recall \textbf{97\%}, False Positive Rate \textbf{13\%} on normal traffic.
+      \item \textbf{Class Weight Effect}: at fixed optimal parameters, \texttt{None} (0.922) and \texttt{'balanced'} (0.921) perform identically (target is already balanced after deduplication).
     \end{itemize}
 
     \column{0.5\textwidth}
@@ -263,16 +257,14 @@
 \begin{frame}{Multiclass Classification Results}
   \begin{columns}
     \column{0.55\textwidth}
+    \small
     \textbf{The Multiclass Challenge} \\
-    \vspace{0.2cm}
+    \vspace{0.15cm}
     \begin{itemize}
-      \item Best model achieves a \textbf{Macro F1-Score} of \textbf{0.57}
-      \item \textbf{Majority classes} (Normal, Generic) are predicted with 
-        high confidence
-      \item \textbf{Minority classes} drag the macro average down due to 
-        overlapping feature spaces and extreme sparsity
+      \item \textbf{Random Forest ($k=40$)}: achieves a \textbf{Macro F1 of 0.561} on the test set (\textbf{0.559} in CV vs \textbf{0.540} for DT and \textbf{0.461} for the 184-feature Baseline)
+      \item \textbf{Majority classes} (Normal, Exploits) are predicted with high confidence
+      \item \textbf{Minority classes}: low precision due to severe overlap and scarcity (Analysis 0.17, Backdoor 0.16, Shellcode 0.26)
     \end{itemize}
-    \vspace{0.2cm}
     \begin{alertblock}{Impact of Balancing}
       Thanks to \texttt{class\_weight='balanced'}, the model 
       is also able to detect instances of ultra-rare attacks 
@@ -302,17 +294,11 @@
 
 \begin{frame}{Project Evaluation}
   \begin{itemize}
-    \item \textbf{Methodological trade-offs}: Prioritizing interpretability 
-      (SelectKBest and Tree-based models) proved highly effective for binary 
-      detection, achieving an F1-Score of 0.92 while maintaining transparent 
-      decision rules
+    \item \textbf{Performance \& Operational Trade-offs}: The binary model achieves a strong F1-Score (\textbf{0.921}, 97\% attack recall), but its \textbf{13\% false positive rate} on normal traffic would produce a high volume of false alarms in real-world networks dominated by benign flows
     \vspace{0.2cm}
-    \item \textbf{The Multiclass bottleneck}: Differentiating specific attack 
-      vectors remains intrinsically difficult (Macro F1: 0.57). The confusion matrix revealed concentrated overlap between related categories (e.g. DoS/Exploits, Backdoor/Analysis) and, notably, between Fuzzers and Normal traffic, independent of class imbalance
+    \item \textbf{The Multiclass Bottleneck}: Differentiating specific attack vectors remains challenging (\textbf{Macro F1: 0.561}), with concentrated overlap between related pairs (Backdoor/Analysis, DoS/Exploits) and between Fuzzers and Normal traffic (13\%)
     \vspace{0.2cm}
-    \item \textbf{Data Quality Dependency}: The project highlighted how extreme class 
-      imbalance heavily constrain the theoretical upper bound of any 
-      standard classifier's performance
+    \item \textbf{Robustness to Multicollinearity}: Manually dropping 10 highly correlated features ($r \ge 0.9$) slightly reduced CV Macro F1 (from \textbf{0.559 $\pm$ 0.001} to \textbf{0.552 $\pm$ 0.002}), confirming that tree-based models handle redundancy natively
   \end{itemize}
 \end{frame}
 

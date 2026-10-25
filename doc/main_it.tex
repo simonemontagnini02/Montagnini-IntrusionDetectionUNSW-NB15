@@ -87,6 +87,7 @@
     \item \textbf{Righe duplicate}: 78.519 su 175.341 (\textbf{44,8\%})
       \begin{itemize}
         \item Rimosse prima dello split, così da evitare data leakage tra train e test
+        \item Impatto sulla distribuzione: il task binario diventa quasi bilanciato (\textbf{50,5\% Normal /49,5\% Attack})
       \end{itemize}
     \vspace{0.3cm}
     \item \textbf{Feature categoriche}:
@@ -116,7 +117,7 @@
     \end{tabular}
   \end{center}
   \vspace{0.3cm}
-  \textbf{27 feature} superano il limite ($> 1.0$) e subiranno una trasformazione logaritmica (\texttt{log1p}) in fase di preprocessing.
+  \textbf{27 feature} superano la soglia ($> 1.0$) nell'EDA sul dataset grezzo; dopo la deduplicazione sul training set, \textbf{27 feature} sono risultate asimmetriche e trasformate con \texttt{log1p}.
 \end{frame}
 
 \section{Preprocessing}
@@ -124,9 +125,9 @@
 \begin{frame}{Preparazione \& Trasformazione Dati}
   \begin{enumerate}
     \item \textbf{Rimozione duplicati}: rimosse 78.519 righe duplicate prima dello split
-    \item \textbf{Split train/test}: 67/33, stratificato su \texttt{label}
+    \item \textbf{Split train/test}: 67/33, stratificato su \texttt{attack\_cat} per preservare le proporzioni di tutte le classi in entrambi i task
     \item \textbf{Encoding}: \texttt{OneHotEncoder} su \texttt{proto},
-      \texttt{service}, \texttt{state} — 185 feature totali
+      \texttt{service}, \texttt{state} — \textbf{184 feature totali}
     \item \textbf{Correzione asimmetria}: trasformazione \texttt{log1p} su 27 feature (asimmetria $> 1.0$)
   \end{enumerate}
 \end{frame}
@@ -152,7 +153,7 @@
       \begin{itemize}
         \item \texttt{mutual\_info\_classif} è stata esclusa a causa del costo computazionale eccessivo data la dimensione del dataset.
       \end{itemize}
-    \item \textbf{Selezione}: $k = 50$ su 185 feature, selezionate separatamente per \texttt{label} e \texttt{attack\_cat}
+    \item \textbf{Selezione}: $k = 50$ su 184 feature; integrata nella \texttt{Pipeline} con tuning di $k \in \{30, 40, 50\}$ in Cross-Validation
   \end{itemize}
   \vspace{0.3cm}
   \begin{block}{Preservazione dell'Interpretabilità}
@@ -164,10 +165,9 @@
   \begin{itemize}
     \item \textbf{Scaling preliminare}: feature standardizzate (\texttt{StandardScaler}), con fit della PCA esclusivamente 
       sul training set
-    \item \textbf{Varianza spiegata}: mantenere il 90\% della varianza richiede \textbf{137 componenti} (118 per l'80\%) 
-    \item \textbf{Riduzione limitata}: le componenti mantenute rappresentano ancora circa il 74\% delle feature originali
+    \item \textbf{Varianza spiegata}: mantenere il 90\% della varianza richiede \textbf{136 componenti} (118 per l'80\%) 
+    \item \textbf{Riduzione limitata}: dovuta alle numerose colonne generate dal \texttt{OneHotEncoder}: una volta standardizzate, queste feature risultano quasi incorrelate tra loro e non possono essere compresse efficacemente
   \end{itemize}
-  \vspace{0.3cm}
   \begin{block}{Analisi delle Componenti e Contributo delle Feature}
     Piuttosto che essere dominate dalle numerose colonne \texttt{proto} codificate con one-hot encoding, le componenti principali mostrano un mix di tipologie di dati sottostanti. Per esempio, la PC2 è guidata quasi interamente da feature legate alle tempistiche e ai byte (\texttt{sinpkt}, \texttt{dload}, \texttt{tcprtt})
   \end{block}
@@ -179,7 +179,7 @@
       \toprule
        & \textbf{SelectKBest} & \textbf{PCA} \\
       \midrule
-      Dimensionalità & 50 feature & 137 componenti \\
+      Dimensionalità & 30--50 feature & 136 componenti \\
       Interpretabilità & Alta (dominio originale) & Bassa (combinazioni lineari) \\
       Trasformazione & Supervisionata (target-aware) & Non supervisionata \\
       Efficienza di training & Accettabile & Proibitiva \\
@@ -195,12 +195,11 @@
 
 \begin{frame}{Metodologia di Classificazione}
   \begin{itemize}
-    \item \textbf{Algoritmi}: Decision Tree (come baseline) e Random Forest
-    \item \textbf{Tuning degli Iperparametri}: \texttt{max\_depth} e \texttt{criterion} per Decision Tree, \texttt{n\_estimators} e \texttt{max\_depth} per Random Forest, \texttt{class\_weight} \texttt{None} vs \texttt{'balanced'} per entrambi
+    \item \textbf{Pipeline}: Decision Tree e Random Forest inseriti in una \texttt{Pipeline} (\texttt{VarianceThreshold} + \texttt{SelectKBest} + \texttt{Classifier}), confrontati con Random Forest di \textbf{baseline}
+    \item \textbf{Tuning degli Iperparametri}: \texttt{selector\_\_k} ($30, 40, 50$), \texttt{max\_depth} e \texttt{criterion} (DT), \texttt{n\_estimators} e \texttt{max\_depth} (RF)
     \item \textbf{Gestione dello Sbilanciamento}: incluso \texttt{class\_weight} (\texttt{None} vs \texttt{'balanced'}) per valutare la strategia migliore sui vettori di minaccia rari
-    \item \textbf{Validazione}: 3-fold \texttt{StratifiedKFold} per garantire una rappresentazione proporzionale di tutte le classi durante il training
+    \item \textbf{Validazione}: 3-fold \texttt{StratifiedKFold} sul training set; test set usato solo per la valutazione finale
   \end{itemize}
-  \vspace{0.2cm}
   \begin{block}{Metriche di Valutazione}
     L'Accuracy è fuorviante su dataset fortemente sbilanciati. I modelli sono valutati sulla base di \textbf{F1-Score} (classificazione binaria) e \textbf{Macro F1-Score} 
     (classificazione multiclasse) per pesare correttamente le performance sulle classi minoritarie.
@@ -210,28 +209,28 @@
 \begin{frame}{Risultati Classificazione Binaria}
   \begin{columns}
     \column{0.5\textwidth}
-    \hspace{1.1cm}\textbf{Performance Modello} \\
-    \vspace{0.2cm}
-    \small
-    \hspace{0.5cm}
-    \begin{tabular}{lcc}
+    \centering
+    \textbf{Performance in Cross-Validation}
+    \vspace{0.15cm}
+    
+    \footnotesize
+    \begin{tabular}{lccc}
       \toprule
-      \textbf{Metrica} & \textbf{DT} & \textbf{RF} \\
+      \textbf{Metrica} & \textbf{RF Base} & \textbf{DT} & \textbf{RF Best} \\
       \midrule
-      Accuracy & 0.916 & 0.920 \\
-      Precision & 0.918 & 0.923 \\
-      Recall & 0.916 & 0.920 \\
-      \textbf{F1-Score} & \textbf{0.916} & \textbf{0.920} \\
+      Accuracy & -- & 0.913 & 0.919 \\
+      Precision & -- & 0.879 & 0.885 \\
+      Recall & -- & 0.956 & 0.963 \\
+      \textbf{F1-Score} & \textbf{0.919} & \textbf{0.916} & \textbf{0.922} \\
       \bottomrule
     \end{tabular}
-
-    \vspace{0.1cm}
-    \hspace{0.8cm}{\tiny DT = Decision Tree, RF = Random Forest}
     
-    \vspace{0.4cm}
+    \vspace{0.25cm}
+    \raggedright
+    \footnotesize
     \begin{itemize}
-      \item Random Forest raggiunge un eccellente F1-Score di \textbf{0.920}.
-      \item Il modello è \textbf{molto affidabile} nella distinzione delle attività malevole dal traffico normale.
+      \item \textbf{Test Set (RF, $k=50$)}: \textbf{F1 = 0.921}, Recall attacchi \textbf{97\%}, False Positive Rate \textbf{13\%} sul traffico normale.
+      \item \textbf{Effetto Class Weight}: a parità di parametri ottimali, \texttt{None} (0.922) e \texttt{'balanced'} (0.921) sono equivalenti (target già bilanciato post-deduplicazione).
     \end{itemize}
 
     \column{0.5\textwidth}
@@ -248,11 +247,11 @@
     \column{0.55\textwidth}
     \small
     \textbf{La sfida Multiclasse} \\
-    \vspace{0.2cm}
+    \vspace{0.15cm}
     \begin{itemize}
-      \item Il modello migliore ottiene un \textbf{Macro F1-Score} di \textbf{0.57}
-      \item Le \textbf{classi più frequenti} (Normal, Generic) vengono predette con alta confidenza
-      \item Le \textbf{classi rare} abbassano la media macro a causa della sovrapposizione delle feature e della scarsità di esempi per l'addestramento
+      \item \textbf{Random Forest ($k=40$)}: raggiunge un \textbf{Macro F1 di 0.561} sul test set (\textbf{0.559} in CV vs \textbf{0.540} di DT e \textbf{0.461} della Baseline a 184 feature)
+      \item \textbf{Classi maggioritarie} (Normal, Exploits) predette con alta precisione
+      \item \textbf{Classi minoritarie}: alta confusione e bassa precision (es. Analysis 0.17, Backdoor 0.16, Shellcode 0.26)
     \end{itemize}
     \begin{alertblock}{Impatto del Bilanciamento}
       Grazie a \texttt{class\_weight='balanced'}, il modello riesce a rilevare anche istanze di attacchi molto rari 
@@ -282,12 +281,11 @@
 
 \begin{frame}{Valutazione Progetto}
   \begin{itemize}
-    \item \textbf{Trade-off metodologici}: favorire l'interpretabilità 
-      (SelectKBest e modelli ad albero) si è rivelato altamente efficace per la detection binaria, ottenendo un F1-Score di 0.92 pur mantenendo regole decisionali trasparenti
+    \item \textbf{Performance e Trade-off Operativi}: Il modello binario ottiene un ottimo F1-Score (\textbf{0.921}, recall attacchi 97\%), ma il \textbf{13\% di falsi positivi} sul traffico normale genererebbe molti falsi allarmi in scenari reali fortemente sbilanciati verso il traffico benigno
     \vspace{0.2cm}
-    \item \textbf{Il limite del Multiclasse}: differenziare i singoli vettori di attacco rimane intrinsecamente difficile (Macro F1: 0.57). La matrice di confusione ha rivelato una forte sovrapposizione tra categorie correlate (e.g. DoS/Exploits, Backdoor/Analysis) e, in particolare, tra Fuzzers e traffico Normal
+    \item \textbf{Il limite del Multiclasse}: Distinguere le singole categorie resta complesso (\textbf{Macro F1: 0.561}), con forti sovrapposizioni tra classi affini (Backdoor/Analysis, DoS/Exploits) e tra Fuzzers e traffico Normal (13\%)
     \vspace{0.2cm}
-    \item \textbf{Dipendenza dalla Qualità dei Dati}: Il progetto ha mostrato come l'estremo sbilanciamento delle classi limiti pesantemente l'upper bound teorico delle performance di qualsiasi classificatore standard
+    \item \textbf{Robustezza alla Multicollinearità}: La rimozione manuale di 10 feature altamente correlate ($r \ge 0.9$) ha ridotto leggermente il Macro F1 in CV (da \textbf{0.559 $\pm$ 0.001} a \textbf{0.552 $\pm$ 0.002}), confermando che i modelli ad albero gestiscono nativamente la ridondanza
   \end{itemize}
 \end{frame}
 
