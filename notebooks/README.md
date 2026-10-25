@@ -29,9 +29,8 @@ The file `UNSW_NB15_training-set.parquet` is included in the `../data/` folder.
 
 
 ## How to run
-1. Activate Jupyter environment and install dependencies.
+1. Activate Jupyter environment and install the dependencies.
 2. Ensure the raw dataset `UNSW_NB15_training-set.parquet` is placed in `../data/` directory.
-3. Run notebooks in order.
-4. Notebooks 02 and 03 will automatically generate and save the processed and reduced datasets into the `../data/` directory
-5. Notebooks 04 and 05 will train and save the best models into the `../models/` directory 
-6. Notebook 06 will load the previously saved models to perform the final evaluation without retraining
+3. Start Jupyter and run the notebooks in order.
+4. Notebooks 04 and 05 will train and save the best models into the `../models/` directory 
+5. Notebook 06 will load the previously saved models to perform the final evaluation without retraining

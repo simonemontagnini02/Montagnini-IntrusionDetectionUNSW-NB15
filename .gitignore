@@ -5,3 +5,6 @@ __pycache__/
 # Generated data
 data/processed
 data/reduced
+
+#Saved models
+data/models
